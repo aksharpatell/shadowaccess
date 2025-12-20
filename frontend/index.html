@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ShadowAccess</title>
+  <style>
+	body { font-family: Arial; padding: 40px; max-width: 900px; }
+	input { margin-right: 10px; padding: 6px; }
+	button { padding: 6px 12px; }
+	.score {
+	  margin-top: 20px;
+	  font-size: 36px;
+	  font-weight: bold;
+	}
+	.score.low { color: green; }
+	.score.medium { color: orange; }
+	.score.high { color: red; }
+  
+	table { margin-top: 20px; border-collapse: collapse; width: 100%; }
+	th, td { border: 1px solid #ccc; padding: 8px; }
+	th { background: #f5f5f5; }
+  
+	.HIGH { color: red; font-weight: bold; }
+	.MEDIUM { color: orange; font-weight: bold; }
+	.REVIEW { color: goldenrod; font-weight: bold; }
+	.LOW { color: green; }
+  </style>
+  
+</head>
+<body>
+
+<h1>ShadowAccess</h1>
+<p>GitHub Access Risk Analyzer</p>
+
+<input id="owner" placeholder="GitHub owner" value="aksharpatell" />
+<input id="repo" placeholder="Repository name" value="focus-track" />
+<button onclick="analyze()">Analyze</button>
+
+<div id="output"></div>
+
+<script>
+	async function analyze() {
+	  const owner = document.getElementById("owner").value;
+	  const repo = document.getElementById("repo").value;
+	
+	  const res = await fetch(`http://127.0.0.1:5000/repo?owner=${owner}&repo=${repo}`);
+	  const data = await res.json();
+	
+	  // Headline score
+	  const score = data.overall_risk_score || 0;
+	  let scoreClass = "low";
+	  if (score >= 70) scoreClass = "high";
+	  else if (score >= 40) scoreClass = "medium";
+	
+	  let html = `<div class="score ${scoreClass}">
+		Overall Risk Score: ${score}/100
+	  </div>`;
+	
+	  // Sort findings by severity (desc)
+	  const findings = data.risk_analysis.sort((a, b) => b.severity - a.severity);
+	
+	  html += "<table>";
+	  html += "<tr><th>User</th><th>Risk</th><th>Severity</th><th>Reason</th><th>Recommendation</th></tr>";
+	
+	  findings.forEach(f => {
+		html += `<tr>
+		  <td>${f.user}</td>
+		  <td class="${f.risk}">${f.risk}</td>
+		  <td>${f.severity}</td>
+		  <td>${f.reason}</td>
+		  <td>${f.recommendation}</td>
+		</tr>`;
+	  });
+	
+	  html += "</table>";
+	  document.getElementById("output").innerHTML = html;
+	}
+	</script>
+	
+
+</body>
+</html>
