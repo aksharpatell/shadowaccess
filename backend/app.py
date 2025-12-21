@@ -1,6 +1,15 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+from flask import Flask, request, jsonify, send_from_directory
+import os
+
+app = Flask(
+    __name__,
+    static_folder="../dist",
+    static_url_path="/"
+)
+
 from github_client import (
     get_public_repo,
     get_repo_collaborators,
@@ -166,3 +175,11 @@ def org():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_react(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, "index.html")
