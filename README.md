@@ -6,6 +6,29 @@ Unlike many tools that over-promise certainty, ShadowAccess separates **risk sev
 
 ---
 
+## Demo & Screenshots
+
+### Home Page
+The landing page explains the purpose of ShadowAccess and allows users to scan a GitHub username or organization.
+
+![Home Page](screenshots/Home%20Page.png)
+
+---
+
+### Risk Scoring Model
+Explanation of the 0–100 normalized risk scale and how confidence-aware scoring works under limited visibility.
+
+![Scoring Details](screenshots/Scoring%20Details.png)
+
+---
+
+### Security Scanning Output
+Results view showing repository risk scores, visibility level, and export options.
+
+![Security Scanning Output](screenshots/Security%20Scanning%20Output.png)
+
+---
+
 ## Problem
 
 GitHub repositories frequently accumulate **silent access risks**:
