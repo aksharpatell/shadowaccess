@@ -11,7 +11,7 @@ app = Flask(
     static_folder="../dist",
     static_url_path="/"
 )
-CORS(app)
+CORS(app, origins="*", supports_credentials=False)
 
 from github_client import (
     get_public_repo,
