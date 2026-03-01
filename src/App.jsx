@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 
-const API_BASE = "";
+const API_BASE = "http://127.0.0.1:5050";
 
 function scoreClass(score) {
   if (score <= 25) return "scoreLow";
