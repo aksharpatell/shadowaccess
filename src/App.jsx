@@ -72,7 +72,7 @@ export default function App() {
         <div className="header">
           <div className="brand">
             <img
-              src="/src/assets/Github logo.png"
+              src="/github-logo.png"
               alt="GitHub"
               className="githubLogo"
             />
