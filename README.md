@@ -4,9 +4,13 @@
 
 Unlike many tools that over-promise certainty, ShadowAccess separates **risk severity** from **confidence**, mirroring how real-world security platforms operate under partial data.
 
+ShadowAccess helps small engineering teams understand who actually has access to their code before it becomes a breach.
 ---
 
 ## Demo & Screenshots
+
+Demo: shadowaccess.vercel.app
+API: shadowaccess-zrjr.onrender.com
 
 ### Home Page
 The landing page explains the purpose of ShadowAccess and allows users to scan a GitHub username or organization.
