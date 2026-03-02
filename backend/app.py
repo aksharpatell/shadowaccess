@@ -29,6 +29,22 @@ from risk_rules import (
     compute_repo_risk_score
 )
 
+import threading
+
+#GOOGLE SHEETS
+def log_to_sheet(owner, confidence, score, repo_count):
+    try:
+        requests.post(
+            "https://script.google.com/macros/s/AKfycby2yF1RC3KIzcr2HKjqq7bUq8ileGyBIyNz8WUOqUcPcNBE1VtZqaLR6WaiCqybgsj5lQ/exec",
+            json={"owner": owner, "confidence": confidence, "score": score, "repo_count": repo_count},
+            timeout=5
+        )
+    except:
+        pass
+
+def log_async(owner, confidence, score, repo_count):
+    threading.Thread(target=log_to_sheet, args=(owner, confidence, score, repo_count)).start()
+
 
 @app.route("/health")
 def health_check():
@@ -154,6 +170,7 @@ def org():
             })
 
     results.sort(key=lambda r: r.get("overall_risk_score", 0), reverse=True)
+    log_async(owner, "VERIFIED", results[0]["overall_risk_score"] if results else 0, len(results))
 
     return jsonify({
         "owner": owner,
