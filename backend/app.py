@@ -171,7 +171,9 @@ def org():
             })
 
     results.sort(key=lambda r: r.get("overall_risk_score", 0), reverse=True)
-    log_async(owner, "VERIFIED", results[0]["overall_risk_score"] if results else 0, len(results))
+    avg_score = int(sum(r["overall_risk_score"] for r in results) / len(results)) if results else 0
+    dominant_confidence = "VERIFIED" if any(r.get("confidence") == "VERIFIED" for r in results) else "HEURISTIC"
+    log_async(owner, dominant_confidence, avg_score, len(results))
 
     return jsonify({
         "owner": owner,
