@@ -186,6 +186,7 @@ function GitHubTab() {
 function DriveTab() {
   const [authed, setAuthed] = useState(false);
   const [accessToken, setAccessToken] = useState("");
+  React.useEffect(() => { if (accessToken) console.log("TOKEN:", accessToken); }, [accessToken]);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");

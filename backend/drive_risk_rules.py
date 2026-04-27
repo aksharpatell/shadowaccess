@@ -6,6 +6,10 @@ def analyze_drive_file_risk(files):
         file_risks = []
         permissions = f.get("permissions", [])
         name = f.get("name", "unknown")
+        folder_name = f.get("folder_name", "My Drive")
+        folder_id = f.get("folder_id", "root")
+		folder_name = f.get("folder_name", "My Drive")
+		folder_id = f.get("folder_id", "root")
         modified = f.get("modifiedTime", "")
 
         # Check for anyone-with-link access
@@ -14,7 +18,7 @@ def analyze_drive_file_risk(files):
                 file_risks.append({
                     "rule": "PUBLIC_LINK_ACCESS",
                     "severity": "HIGH",
-                    "detail": f'"{name}" is accessible to anyone with the link', "link": f.get("webViewLink", ""), "file_id": f.get("id", "")
+                    "detail": f'"{name}" is accessible to anyone with the link', "link": f.get("webViewLink", ""), "file_id": f.get("id", ""), "folder_name": folder_name, "folder_id": folder_id
                 })
 
         # Check for external domain sharing
@@ -25,7 +29,7 @@ def analyze_drive_file_risk(files):
                     file_risks.append({
                         "rule": "EXTERNAL_USER_ACCESS",
                         "severity": "MEDIUM",
-                        "detail": f'"{name}" shared with external user: {email}', "link": f.get("webViewLink", ""), "file_id": f.get("id", "")
+                        "detail": f'"{name}" shared with external user: {email}', "link": f.get("webViewLink", ""), "file_id": f.get("id", ""), "folder_name": folder_name, "folder_id": folder_id
                     })
 
         # Check for stale sharing (not modified in 1+ year)
@@ -37,7 +41,7 @@ def analyze_drive_file_risk(files):
                     file_risks.append({
                         "rule": "STALE_SHARED_FILE",
                         "severity": "MEDIUM",
-                        "detail": f'"{name}" has not been modified in {age_days} days but is still shared', "link": f.get("webViewLink", ""), "file_id": f.get("id", "")
+                        "detail": f'"{name}" has not been modified in {age_days} days but is still shared', "link": f.get("webViewLink", ""), "file_id": f.get("id", ""), "folder_name": folder_name, "folder_id": folder_id
                     })
             except Exception:
                 pass
@@ -48,7 +52,7 @@ def analyze_drive_file_risk(files):
                 file_risks.append({
                     "rule": "PUBLIC_WRITE_ACCESS",
                     "severity": "CRITICAL",
-                    "detail": f'"{name}" allows anyone to edit', "link": f.get("webViewLink", ""), "file_id": f.get("id", "")
+                    "detail": f'"{name}" allows anyone to edit', "link": f.get("webViewLink", ""), "file_id": f.get("id", ""), "folder_name": folder_name, "folder_id": folder_id
                 })
 
         risks.extend(file_risks)
