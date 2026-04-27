@@ -308,7 +308,7 @@ function DriveTab() {
 // ─── FOLDER GROUP ─────────────────────────────────────────────────────────────
 
 function FolderGroup({ folderName, files, accessToken }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const allRisks = Object.values(files).flat();
   const hasCrit = allRisks.some(r => r.severity === "CRITICAL");
   const hasHigh = allRisks.some(r => r.severity === "HIGH");

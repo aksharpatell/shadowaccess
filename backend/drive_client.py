@@ -46,13 +46,15 @@ def get_shared_files(token_info):
             folder_map[pid] = "My Drive"
 
     # Attach folder name to each file
-    for f in results:
-        parents = f.get("parents", [])
-        if parents:
-            f["folder_name"] = folder_map.get(parents[0], "My Drive")
-            f["folder_id"] = parents[0]
-        else:
-            f["folder_name"] = "My Drive"
-            f["folder_id"] = "root"
+for f in results:
+    parents = f.get("parents", [])
+    if parents:
+        folder_name = folder_map.get(parents[0], "My Drive")
+        folder_id = "root" if folder_name == "My Drive" else parents[0]
+        f["folder_name"] = folder_name
+        f["folder_id"] = folder_id
+    else:
+        f["folder_name"] = "My Drive"
+        f["folder_id"] = "root"
 
     return results
