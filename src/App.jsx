@@ -71,7 +71,6 @@ export default function App() {
           <img src={tab === "github" ? "/github-logo.png" : "/drive-logo.png"} alt="logo" />
           <span className="app-brand-name">ShadowAccess</span>
         </div>
-
         <div className="app-tabs">
           <button
             className={`app-tab ${tab === "github" ? "active" : ""}`}
@@ -167,12 +166,10 @@ function GitHubTab() {
               <p>{data.repo_count} repositories scanned for <strong>{data.owner}</strong></p>
             </div>
           </div>
-
           <div className="results-header">
             <span className="results-title">Repositories</span>
             <span className="results-meta">sorted by highest risk</span>
           </div>
-
           <div className="grid">
             {data.repositories.map(r => <RepoCard key={r.repository} repo={r} />)}
           </div>
@@ -221,19 +218,21 @@ function DriveTab() {
     finally { setLoading(false); }
   }
 
-  // Group risks by file name
-  function groupByFile(risks) {
+  function groupByFolder(risks) {
     const map = {};
     for (const r of risks) {
+      const folder = r.folder_name || "My Drive";
+      const folderId = r.folder_id || "root";
+      if (!map[folderId]) map[folderId] = { name: folder, files: {} };
       const match = r.detail.match(/^"([^"]+)"/);
-      const name = match ? match[1] : "Unknown file";
-      if (!map[name]) map[name] = [];
-      map[name].push(r);
+      const fileName = match ? match[1] : "Unknown file";
+      if (!map[folderId].files[fileName]) map[folderId].files[fileName] = [];
+      map[folderId].files[fileName].push(r);
     }
     return Object.entries(map).sort((a, b) => {
       const weight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-      const maxA = Math.max(...a[1].map(r => weight[r.severity] || 0));
-      const maxB = Math.max(...b[1].map(r => weight[r.severity] || 0));
+      const maxA = Math.max(...Object.values(a[1].files).flat().map(r => weight[r.severity] || 0));
+      const maxB = Math.max(...Object.values(b[1].files).flat().map(r => weight[r.severity] || 0));
       return maxB - maxA;
     });
   }
@@ -250,7 +249,7 @@ function DriveTab() {
     );
   }
 
-  const grouped = data ? groupByFile(data.risk_analysis || []) : [];
+  const grouped = data ? groupByFolder(data.risk_analysis || []) : [];
 
   return (
     <>
@@ -275,7 +274,7 @@ function DriveTab() {
             <div className={`score-big ${scoreClass(data.overall_risk_score)}`}>{data.overall_risk_score}</div>
             <div className="score-info">
               <h3>Drive Risk Score</h3>
-              <p>{data.total_files} files scanned · {data.risk_analysis?.length || 0} risks found across {grouped.length} files</p>
+              <p>{data.total_files} files scanned · {data.risk_analysis?.length || 0} risks found across {grouped.length} folders</p>
             </div>
           </div>
 
@@ -287,11 +286,16 @@ function DriveTab() {
             <>
               <div className="results-header">
                 <span className="results-title">Risky Files</span>
-                <span className="results-meta">sorted by highest severity</span>
+                <span className="results-meta">organized by folder</span>
               </div>
-              {grouped.map(([name, risks]) => (
-  <DriveFileCard key={name} name={name} risks={risks} accessToken={accessToken} />
-))}
+              {grouped.map(([folderId, folder]) => (
+                <FolderGroup
+                  key={folderId}
+                  folderName={folder.name}
+                  files={folder.files}
+                  accessToken={accessToken}
+                />
+              ))}
             </>
           )}
         </>
@@ -300,7 +304,59 @@ function DriveTab() {
   );
 }
 
-function DriveFileCard({ name, risks, accessToken, onFixed }) {
+// ─── FOLDER GROUP ─────────────────────────────────────────────────────────────
+
+function FolderGroup({ folderName, files, accessToken }) {
+  const [open, setOpen] = useState(true);
+  const allRisks = Object.values(files).flat();
+  const hasCrit = allRisks.some(r => r.severity === "CRITICAL");
+  const hasHigh = allRisks.some(r => r.severity === "HIGH");
+  const topSev = hasCrit ? "CRITICAL" : hasHigh ? "HIGH" : allRisks[0]?.severity;
+  const fileCount = Object.keys(files).length;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+          background: "var(--bg2)", border: "1px solid var(--border2)",
+          borderRadius: open ? "12px 12px 0 0" : 12, cursor: "pointer",
+          borderBottom: open ? "1px solid var(--border)" : undefined
+        }}
+      >
+        <span style={{ fontSize: 16 }}>📁</span>
+        <span style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 14, flex: 1 }}>
+          {folderName}
+        </span>
+        <span className={severityBadgeClass(topSev)}>{topSev}</span>
+        <span className="pill" style={{ color: "var(--muted)" }}>{fileCount} file{fileCount !== 1 ? "s" : ""}</span>
+        <span style={{ color: "var(--muted)", fontSize: 12 }}>{open ? "▲" : "▼"}</span>
+      </div>
+
+      {open && (
+        <div style={{
+          border: "1px solid var(--border2)", borderTop: "none",
+          borderRadius: "0 0 12px 12px", overflow: "hidden"
+        }}>
+          {Object.entries(files).map(([fileName, risks]) => (
+            <DriveFileCard
+              key={fileName}
+              name={fileName}
+              risks={risks}
+              accessToken={accessToken}
+              nested
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── DRIVE FILE CARD ──────────────────────────────────────────────────────────
+
+function DriveFileCard({ name, risks, accessToken, nested }) {
   const [open, setOpen] = useState(false);
   const [fixing, setFixing] = useState({});
   const [fixed, setFixed] = useState({});
@@ -333,7 +389,10 @@ function DriveFileCard({ name, risks, accessToken, onFixed }) {
   if (activeRisks.length === 0) return null;
 
   return (
-    <div className="drive-file-card">
+    <div
+      className="drive-file-card"
+      style={nested ? { borderRadius: 0, borderLeft: "none", borderRight: "none", borderTop: "none" } : {}}
+    >
       <div className="drive-file-header" onClick={() => setOpen(v => !v)}>
         <span className="drive-file-name" title={name}>📄 {name}</span>
         <div className="drive-file-badges">
