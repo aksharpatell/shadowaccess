@@ -301,6 +301,7 @@ def revoke_access():
 
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
 
     creds = Credentials(
         token=access_token,
@@ -310,13 +311,26 @@ def revoke_access():
     )
     service = build("drive", "v3", credentials=creds)
 
-    # Find and delete the 'anyone' permission
     perms = service.permissions().list(fileId=file_id).execute()
     for perm in perms.get("permissions", []):
         if perm.get("type") == "anyone":
-            service.permissions().delete(fileId=file_id, permissionId=perm["id"]).execute()
+            try:
+                service.permissions().delete(
+                    fileId=file_id, permissionId=perm["id"]
+                ).execute()
+                return jsonify({"success": True, "action": "deleted"})
+            except HttpError:
+                try:
+                    service.permissions().update(
+                        fileId=file_id,
+                        permissionId=perm["id"],
+                        body={"role": "reader"}
+                    ).execute()
+                    return jsonify({"success": True, "action": "restricted_to_reader"})
+                except HttpError as e:
+                    return jsonify({"error": "inherited_permission", "message": "This file's sharing is controlled by a parent folder. Please update sharing from Google Drive directly.", "link": f"https://drive.google.com/file/d/{file_id}/view"}), 403
 
-    return jsonify({"success": True})
+    return jsonify({"success": True, "action": "no_public_permission_found"})
 
 if __name__ == "__main__":
     # Avoid macOS/AirPlay weirdness with 5000

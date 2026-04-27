@@ -317,7 +317,12 @@ function DriveFileCard({ name, risks, accessToken, onFixed }) {
         headers: { "X-Drive-Token": accessToken, "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: risk.file_id })
       });
-      if (res.ok) setFixed(v => ({ ...v, [risk.rule + risk.file_id]: true }));
+      const json = await res.json();
+      if (res.ok) {
+        setFixed(v => ({ ...v, [risk.rule + risk.file_id]: true }));
+      } else if (json.error === "inherited_permission") {
+        window.open(json.link, "_blank");
+      }
     } catch (e) { console.error(e); }
     finally { setFixing(v => ({ ...v, [risk.rule + risk.file_id]: false })); }
   }
