@@ -3,8 +3,12 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import requests
+import secrets
+from google_auth_oauthlib.flow import Flow
+from drive_client import get_shared_files
+from drive_risk_rules import analyze_drive_file_risk, compute_drive_risk_score
 
-# Load environment variables from .env
+# Load env FIRST before reading any variables
 load_dotenv()
 
 app = Flask(
@@ -12,7 +16,12 @@ app = Flask(
     static_folder="../dist",
     static_url_path="/"
 )
-CORS(app, origins="*", supports_credentials=False)
+CORS(app, origins=["https://shadowaccess.vercel.app", "http://localhost:5173"], supports_credentials=True)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
 from github_client import (
     get_public_repo,
@@ -187,12 +196,81 @@ def org():
 @app.route("/<path:path>")
 def serve_react(path):
     # Keep API routes from being swallowed
-    if path.startswith(("repo", "org", "health")):
+    if path.startswith(("repo", "org", "health", "auth", "drive")):
         return jsonify({"error": "Not found"}), 404
 
     if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.route("/auth/google")
+def auth_google():
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
+        redirect_uri=GOOGLE_REDIRECT_URI
+    )
+    auth_url, state = flow.authorization_url(access_type="offline", include_granted_scopes="true")
+    from flask import session
+    session["state"] = state
+    return jsonify({"auth_url": auth_url})
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    from flask import session
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
+        redirect_uri=GOOGLE_REDIRECT_URI,
+        state=session.get("state")
+    )
+    flow.fetch_token(authorization_response=request.url)
+    creds = flow.credentials
+    token_info = {
+        "access_token": creds.token,
+        "refresh_token": creds.refresh_token,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+    }
+    from flask import session
+    session["drive_token"] = token_info
+    return '''<script>window.opener.postMessage("drive_authed", "*"); window.close();</script>'''
+
+
+@app.route("/drive/scan")
+def drive_scan():
+    from flask import session
+    token_info = session.get("drive_token")
+    if not token_info:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    files = get_shared_files(token_info)
+    risks = analyze_drive_file_risk(files)
+    score = compute_drive_risk_score(risks)
+
+    return jsonify({
+        "total_files": len(files),
+        "overall_risk_score": score,
+        "risk_analysis": risks
+    })
 
 
 if __name__ == "__main__":
