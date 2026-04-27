@@ -216,7 +216,7 @@ def auth_google():
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
         },
-        scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
+        scopes=["https://www.googleapis.com/auth/drive"],
         redirect_uri=GOOGLE_REDIRECT_URI
     )
     auth_url, state = flow.authorization_url(
@@ -243,7 +243,7 @@ def auth_callback():
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
         },
-        scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
+        scopes=["https://www.googleapis.com/auth/drive"],
         redirect_uri=GOOGLE_REDIRECT_URI,
     )
 
@@ -287,7 +287,36 @@ def drive_scan():
         "risk_analysis": risks
     })
 
+@app.route("/drive/revoke-access", methods=["POST"])
+def revoke_access():
+    access_token = request.headers.get("X-Drive-Token")
+    if not access_token:
+        return jsonify({"error": "Not authenticated"}), 401
 
+    data = request.json
+    file_id = data.get("file_id")
+    if not file_id:
+        return jsonify({"error": "file_id required"}), 400
+
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+
+    creds = Credentials(
+        token=access_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+    )
+    service = build("drive", "v3", credentials=creds)
+
+    # Find and delete the 'anyone' permission
+    perms = service.permissions().list(fileId=file_id).execute()
+    for perm in perms.get("permissions", []):
+        if perm.get("type") == "anyone":
+            service.permissions().delete(fileId=file_id, permissionId=perm["id"]).execute()
+
+    return jsonify({"success": True})
+    
 if __name__ == "__main__":
     # Avoid macOS/AirPlay weirdness with 5000
     app.run(debug=True, port=5050)

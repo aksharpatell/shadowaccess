@@ -290,8 +290,8 @@ function DriveTab() {
                 <span className="results-meta">sorted by highest severity</span>
               </div>
               {grouped.map(([name, risks]) => (
-                <DriveFileCard key={name} name={name} risks={risks} />
-              ))}
+  <DriveFileCard key={name} name={name} risks={risks} accessToken={accessToken} />
+))}
             </>
           )}
         </>
@@ -300,12 +300,32 @@ function DriveTab() {
   );
 }
 
-function DriveFileCard({ name, risks }) {
+function DriveFileCard({ name, risks, accessToken, onFixed }) {
   const [open, setOpen] = useState(false);
+  const [fixing, setFixing] = useState({});
+  const [fixed, setFixed] = useState({});
   const hasCrit = risks.some(r => r.severity === "CRITICAL");
   const hasHigh = risks.some(r => r.severity === "HIGH");
   const topSev = hasCrit ? "CRITICAL" : hasHigh ? "HIGH" : risks[0]?.severity;
   const dotColor = { CRITICAL: "#f87171", HIGH: "#fb923c", MEDIUM: "#facc15", LOW: "#4ade80" };
+
+  async function revokeAccess(risk) {
+    setFixing(v => ({ ...v, [risk.rule + risk.file_id]: true }));
+    try {
+      const res = await fetch(`${API_BASE}/drive/revoke-access`, {
+        method: "POST",
+        headers: { "X-Drive-Token": accessToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: risk.file_id })
+      });
+      if (res.ok) setFixed(v => ({ ...v, [risk.rule + risk.file_id]: true }));
+    } catch (e) { console.error(e); }
+    finally { setFixing(v => ({ ...v, [risk.rule + risk.file_id]: false })); }
+  }
+
+  const canFix = (rule) => ["PUBLIC_LINK_ACCESS", "PUBLIC_WRITE_ACCESS"].includes(rule);
+  const activeRisks = risks.filter(r => !fixed[r.rule + r.file_id]);
+
+  if (activeRisks.length === 0) return null;
 
   return (
     <div className="drive-file-card">
@@ -313,23 +333,40 @@ function DriveFileCard({ name, risks }) {
         <span className="drive-file-name" title={name}>📄 {name}</span>
         <div className="drive-file-badges">
           <span className={severityBadgeClass(topSev)}>{topSev}</span>
-          <span className="pill" style={{ color: "var(--muted)" }}>{risks.length} issue{risks.length !== 1 ? "s" : ""}</span>
+          <span className="pill" style={{ color: "var(--muted)" }}>{activeRisks.length} issue{activeRisks.length !== 1 ? "s" : ""}</span>
           <span style={{ color: "var(--muted)", fontSize: 12 }}>{open ? "▲" : "▼"}</span>
         </div>
       </div>
       {open && (
         <div className="drive-file-risks">
-          {risks.map((r, i) => (
-            <div key={i} className="drive-risk-row">
-              <div className="drive-risk-dot" style={{ background: dotColor[r.severity] || "#888" }} />
-              <div className="drive-risk-text">
-  <strong style={{ color: "var(--text)" }}>{r.rule}</strong> — {r.detail.replace(/^"[^"]+" /, "")}
-  {r.link && (
-    <a href={r.link} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: "var(--accent2)", fontSize: 11, fontWeight: 700 }}>
-      Open file →
-    </a>
-  )}
-</div>
+          {activeRisks.map((r, i) => (
+            <div key={i} className="drive-risk-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flex: 1 }}>
+                <div className="drive-risk-dot" style={{ background: dotColor[r.severity] || "#888", marginTop: 4 }} />
+                <div className="drive-risk-text">
+                  <strong style={{ color: "var(--text)" }}>{r.rule}</strong> — {r.detail.replace(/^"[^"]+" /, "")}
+                  {r.link && (
+                    <a href={r.link} target="_blank" rel="noreferrer"
+                      style={{ marginLeft: 8, color: "var(--accent2)", fontSize: 11, fontWeight: 700 }}>
+                      Open file →
+                    </a>
+                  )}
+                </div>
+              </div>
+              {canFix(r.rule) && r.file_id && (
+                <button
+                  onClick={() => revokeAccess(r)}
+                  disabled={fixing[r.rule + r.file_id]}
+                  style={{
+                    marginLeft: 12, padding: "5px 10px", borderRadius: 8,
+                    border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)",
+                    color: "#f87171", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                    whiteSpace: "nowrap", flexShrink: 0
+                  }}
+                >
+                  {fixing[r.rule + r.file_id] ? "Fixing…" : "Revoke Access"}
+                </button>
+              )}
             </div>
           ))}
         </div>
