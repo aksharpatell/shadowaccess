@@ -220,8 +220,9 @@ def auth_google():
         redirect_uri=GOOGLE_REDIRECT_URI
     )
     auth_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
+    access_type="offline",
+    include_granted_scopes="false",
+    prompt="consent"
     )
     from flask import session
     session["state"] = state
@@ -316,7 +317,7 @@ def revoke_access():
             service.permissions().delete(fileId=file_id, permissionId=perm["id"]).execute()
 
     return jsonify({"success": True})
-    
+
 if __name__ == "__main__":
     # Avoid macOS/AirPlay weirdness with 5000
     app.run(debug=True, port=5050)
