@@ -219,7 +219,11 @@ def auth_google():
         scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
         redirect_uri=GOOGLE_REDIRECT_URI
     )
-    auth_url, state = flow.authorization_url(access_type="offline", include_granted_scopes="true")
+    auth_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        code_challenge_method=None
+    )
     from flask import session
     session["state"] = state
     return jsonify({"auth_url": auth_url})
@@ -242,6 +246,8 @@ def auth_callback():
         redirect_uri=GOOGLE_REDIRECT_URI,
         state=session.get("state")
     )
+    import os
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     flow.fetch_token(authorization_response=request.url)
     creds = flow.credentials
     token_info = {
