@@ -323,8 +323,13 @@ function DriveFileCard({ name, risks }) {
             <div key={i} className="drive-risk-row">
               <div className="drive-risk-dot" style={{ background: dotColor[r.severity] || "#888" }} />
               <div className="drive-risk-text">
-                <strong style={{ color: "var(--text)" }}>{r.rule}</strong> — {r.detail.replace(/^"[^"]+" /, "")}
-              </div>
+  <strong style={{ color: "var(--text)" }}>{r.rule}</strong> — {r.detail.replace(/^"[^"]+" /, "")}
+  {r.link && (
+    <a href={r.link} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: "var(--accent2)", fontSize: 11, fontWeight: 700 }}>
+      Open file →
+    </a>
+  )}
+</div>
             </div>
           ))}
         </div>
