@@ -22,19 +22,25 @@ export default function App() {
       <div className="card">
 
         {/* HEADER */}
-        <div className="header">
-          <div className="brand">
-            <img src="/github-logo.png" alt="GitHub" className="githubLogo" />
-            <div>
-              <div className="title">
-                <span className="lockIcon">🔒</span> ShadowAccess
-              </div>
-              <div className="subtitle">
-                Access risk analysis across your tools
-              </div>
-            </div>
-          </div>
-        </div>
+<div className="header">
+  <div className="brand">
+    {tab === "github" ? (
+      <img src="/github-logo.png" alt="GitHub" className="githubLogo" />
+    ) : (
+      <img src="/drive-logo.png" alt="Google Drive" className="githubLogo" />
+    )}
+    <div>
+      <div className="title">
+        <span className="lockIcon">🔒</span> ShadowAccess
+      </div>
+      <div className="subtitle">
+        {tab === "github"
+          ? "GitHub access risk analysis"
+          : "Google Drive sharing risk analysis"}
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* TABS */}
         <div style={{ display: "flex", gap: 8, padding: "0 24px", borderBottom: "1px solid #2a2a2a", marginBottom: 0 }}>
