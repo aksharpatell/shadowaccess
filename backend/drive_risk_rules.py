@@ -14,7 +14,7 @@ def analyze_drive_file_risk(files):
                 file_risks.append({
                     "rule": "PUBLIC_LINK_ACCESS",
                     "severity": "HIGH",
-                    "detail": f'"{name}" is accessible to anyone with the link'
+                    "detail": f'"{name}" is accessible to anyone with the link', "link": f.get("webViewLink", "")
                 })
 
         # Check for external domain sharing
@@ -25,7 +25,7 @@ def analyze_drive_file_risk(files):
                     file_risks.append({
                         "rule": "EXTERNAL_USER_ACCESS",
                         "severity": "MEDIUM",
-                        "detail": f'"{name}" shared with external user: {email}'
+                        "detail": f'"{name}" shared with external user: {email}', "link": f.get("webViewLink", "")
                     })
 
         # Check for stale sharing (not modified in 1+ year)
@@ -37,7 +37,7 @@ def analyze_drive_file_risk(files):
                     file_risks.append({
                         "rule": "STALE_SHARED_FILE",
                         "severity": "MEDIUM",
-                        "detail": f'"{name}" has not been modified in {age_days} days but is still shared'
+                        "detail": f'"{name}" has not been modified in {age_days} days but is still shared', "link": f.get("webViewLink", "")
                     })
             except Exception:
                 pass
@@ -48,7 +48,7 @@ def analyze_drive_file_risk(files):
                 file_risks.append({
                     "rule": "PUBLIC_WRITE_ACCESS",
                     "severity": "CRITICAL",
-                    "detail": f'"{name}" allows anyone to edit'
+                    "detail": f'"{name}" allows anyone to edit', "link": f.get("webViewLink", "")
                 })
 
         risks.extend(file_risks)
