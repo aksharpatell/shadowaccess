@@ -67,5 +67,22 @@ def compute_drive_risk_score(risks):
         "LOW": 5
     }
 
-    total = sum(severity_weights.get(r.get("severity", "LOW"), 5) for r in risks)
-    return min(100, total)
+    # Count unique files affected
+    import re
+    affected_files = set()
+    for r in risks:
+        match = re.match(r'^"([^"]+)"', r.get("detail", ""))
+        if match:
+            affected_files.add(match.group(1))
+
+    total_files = max(len(affected_files), 1)
+
+    # Score based on worst offenders, normalized by file count
+    critical = sum(1 for r in risks if r.get("severity") == "CRITICAL")
+    high = sum(1 for r in risks if r.get("severity") == "HIGH")
+    medium = sum(1 for r in risks if r.get("severity") == "MEDIUM")
+
+    raw = (critical * 40 + high * 15 + medium * 5)
+    normalized = raw / total_files
+
+    return min(100, int(normalized))
