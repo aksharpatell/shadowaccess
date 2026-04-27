@@ -178,6 +178,7 @@ function GitHubTab() {
 
 function DriveTab() {
   const [authed, setAuthed] = useState(false);
+  const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -188,7 +189,8 @@ function DriveTab() {
       .then(({ auth_url }) => {
         const popup = window.open(auth_url, "driveAuth", "width=500,height=600");
         window.addEventListener("message", function handler(e) {
-          if (e.data === "drive_authed") {
+          if (e.data?.type === "drive_authed") {
+            setAccessToken(e.data.access_token);
             setAuthed(true);
             popup.close();
             window.removeEventListener("message", handler);
@@ -203,7 +205,9 @@ function DriveTab() {
     setErr("");
     setData(null);
     try {
-      const res = await fetch(`${API_BASE}/drive/scan`, { credentials: "include" });
+      const res = await fetch(`${API_BASE}/drive/scan`, {
+        headers: { "X-Drive-Token": accessToken }
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Scan failed");
       setData(json);
@@ -252,9 +256,7 @@ function DriveTab() {
           </div>
 
           {data.risk_analysis?.length === 0 && (
-            <div className="introBox">
-              <p>✅ No sharing risks detected in your Drive.</p>
-            </div>
+            <div className="introBox"><p>✅ No sharing risks detected in your Drive.</p></div>
           )}
 
           <div className="grid">

@@ -230,46 +230,52 @@ def auth_google():
 
 @app.route("/auth/callback")
 def auth_callback():
-    from flask import session
+    import os
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-    
-    client_config = {
-        "web": {
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "redirect_uris": [GOOGLE_REDIRECT_URI],
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
-    }
-    
+
     flow = Flow.from_client_config(
-        client_config,
+        {
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
         scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
         redirect_uri=GOOGLE_REDIRECT_URI,
-        state=session.get("state")
     )
-    
+
     authorization_response = request.url.replace("http://", "https://")
     flow.fetch_token(authorization_response=authorization_response)
-    
     creds = flow.credentials
-    token_info = {
-        "access_token": creds.token,
-        "refresh_token": creds.refresh_token,
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-    }
-    session["drive_token"] = token_info
-    return '''<script>window.opener.postMessage("drive_authed", "*"); window.close();</script>'''
+
+    token = creds.token
+    refresh_token = creds.refresh_token or ""
+
+    return f'''<script>
+window.opener.postMessage({{
+  type: "drive_authed",
+  access_token: "{token}",
+  refresh_token: "{refresh_token}"
+}}, "*");
+window.close();
+</script>'''
 
 
 @app.route("/drive/scan")
 def drive_scan():
-    from flask import session
-    token_info = session.get("drive_token")
-    if not token_info:
+    access_token = request.headers.get("X-Drive-Token")
+    if not access_token:
         return jsonify({"error": "Not authenticated"}), 401
+
+    token_info = {
+        "access_token": access_token,
+        "refresh_token": None,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+    }
 
     files = get_shared_files(token_info)
     risks = analyze_drive_file_risk(files)
