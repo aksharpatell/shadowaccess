@@ -232,23 +232,29 @@ def auth_google():
 @app.route("/auth/callback")
 def auth_callback():
     from flask import session
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+    
+    client_config = {
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [GOOGLE_REDIRECT_URI],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    }
+    
     flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uris": [GOOGLE_REDIRECT_URI],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
+        client_config,
         scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"],
         redirect_uri=GOOGLE_REDIRECT_URI,
         state=session.get("state")
     )
-    import os
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-    flow.fetch_token(authorization_response=request.url)
+    flow.oauth2session.code_challenge_method = None
+    
+    authorization_response = request.url.replace("http://", "https://")
+    flow.fetch_token(authorization_response=authorization_response)
+    
     creds = flow.credentials
     token_info = {
         "access_token": creds.token,
@@ -256,7 +262,6 @@ def auth_callback():
         "client_id": GOOGLE_CLIENT_ID,
         "client_secret": GOOGLE_CLIENT_SECRET,
     }
-    from flask import session
     session["drive_token"] = token_info
     return '''<script>window.opener.postMessage("drive_authed", "*"); window.close();</script>'''
 
