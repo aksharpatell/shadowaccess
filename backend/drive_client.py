@@ -33,22 +33,17 @@ def get_shared_files(token_info):
         for pid in f.get("parents", []):
             parent_ids.add(pid)
 
-    # Fetch folder names in batches of 100
+    # Fetch folder names individually
     folder_map = {}
-    parent_list = list(parent_ids)
-    for i in range(0, len(parent_list), 100):
-        batch = parent_list[i:i+100]
-        query = " or ".join([f"id='{pid}'" for pid in batch])
+    for pid in parent_ids:
         try:
-            folder_resp = service.files().list(
-                q=query,
-                fields="files(id, name, mimeType)",
-                pageSize=100
+            folder = service.files().get(
+                fileId=pid,
+                fields="id, name"
             ).execute()
-            for folder in folder_resp.get("files", []):
-                folder_map[folder["id"]] = folder["name"]
+            folder_map[folder["id"]] = folder["name"]
         except Exception:
-            pass
+            folder_map[pid] = "My Drive"
 
     # Attach folder name to each file
     for f in results:

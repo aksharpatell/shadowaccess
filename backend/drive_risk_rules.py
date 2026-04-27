@@ -8,8 +8,8 @@ def analyze_drive_file_risk(files):
         name = f.get("name", "unknown")
         folder_name = f.get("folder_name", "My Drive")
         folder_id = f.get("folder_id", "root")
-		folder_name = f.get("folder_name", "My Drive")
-		folder_id = f.get("folder_id", "root")
+        folder_name = f.get("folder_name", "My Drive")
+        folder_id = f.get("folder_id", "root")
         modified = f.get("modifiedTime", "")
 
         # Check for anyone-with-link access
