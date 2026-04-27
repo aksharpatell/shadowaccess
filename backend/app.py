@@ -222,7 +222,6 @@ def auth_google():
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        code_challenge_method=None
     )
     from flask import session
     session["state"] = state
@@ -250,7 +249,6 @@ def auth_callback():
         redirect_uri=GOOGLE_REDIRECT_URI,
         state=session.get("state")
     )
-    flow.oauth2session.code_challenge_method = None
     
     authorization_response = request.url.replace("http://", "https://")
     flow.fetch_token(authorization_response=authorization_response)
